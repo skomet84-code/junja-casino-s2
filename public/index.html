@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07060a">
+<title>JUNJA LAND CASINO · SEASON 2</title>
+<meta name="description" content="하늘이 내려준 카지노 · 준자랜드 시즌 2">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Noto+Serif+KR:wght@600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="/css/app.css?v=2">
+</head>
+<body>
+<div class="app">
+  <header class="top" id="top">
+    <div class="brand" data-go="lobby" id="brand"><span id="crest"></span><div class="w"><b class="foil">JUNJA LAND</b><small>CASINO · SEASON II</small></div></div>
+    <div class="wallet" id="wallet"><div class="coin">G</div><div class="bal" id="bal">-</div></div>
+  </header>
+  <section class="view" id="v-auth"></section>
+  <section class="view" id="v-lobby"></section>
+  <section class="view" id="v-tables"></section>
+  <section class="view" id="v-table"></section>
+  <section class="view" id="v-rank"></section>
+  <section class="view" id="v-me"></section>
+  <section class="view" id="v-slot"></section>
+  <section class="view" id="v-bj"></section>
+  <section class="view" id="v-plinko"></section>
+  <section class="view" id="v-hilo"></section>
+  <section class="view" id="v-mines"></section>
+  <section class="view" id="v-dice"></section>
+  <section class="view" id="v-vpoker"></section>
+  <section class="view" id="v-crash"></section>
+  <section class="view" id="v-bac"></section>
+</div>
+<nav class="nav" id="nav"><div class="in">
+  <button data-go="lobby"><span data-i="home"></span>로비</button>
+  <button data-go="tables"><span data-i="cards"></span>테이블</button>
+  <button data-go="rank"><span data-i="trophy"></span>랭킹</button>
+  <button data-go="me"><span data-i="user"></span>내 정보</button>
+</div></nav>
+<button class="rx-btn hide" id="rxBtn" aria-label="리액션"></button>
+<div class="floaty" id="floaty"></div>
+<canvas id="fx"></canvas>
+<script src="/js/icons.js?v=2"></script>
+<script src="/js/core.js?v=2"></script>
+<script src="/js/main.js?v=2"></script>
+<script src="/js/solo.js?v=2"></script>
+<script src="/js/live.js?v=2"></script>
+<script src="/js/tables.js?v=2"></script>
+<script>S2.boot();</script>
+</body>
+</html>

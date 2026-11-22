@@ -1,0 +1,100 @@
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  nick TEXT NOT NULL,
+  nick_key TEXT NOT NULL UNIQUE,
+  pw TEXT NOT NULL,
+  salt TEXT NOT NULL,
+  bal BIGINT NOT NULL DEFAULT 0,
+  peak BIGINT NOT NULL DEFAULT 0,
+  created BIGINT NOT NULL,
+  last_seen BIGINT NOT NULL DEFAULT 0,
+  banned INT NOT NULL DEFAULT 0,
+  is_admin INT NOT NULL DEFAULT 0,
+  daily TEXT NOT NULL DEFAULT '',
+  rescue_at BIGINT NOT NULL DEFAULT 0,
+  avatar INT NOT NULL DEFAULT 0,
+  last_react BIGINT NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS sessions (
+  token TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  created BIGINT NOT NULL,
+  expires BIGINT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS sessions_user ON sessions(user_id);
+CREATE TABLE IF NOT EXISTS ledger (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  game TEXT NOT NULL,
+  wager BIGINT NOT NULL,
+  payout BIGINT NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  ts BIGINT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ledger_user_ts ON ledger(user_id, ts DESC);
+CREATE INDEX IF NOT EXISTS ledger_ts ON ledger(ts DESC);
+CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS solo (
+  user_id TEXT NOT NULL,
+  game TEXT NOT NULL,
+  state TEXT NOT NULL,
+  ver INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, game)
+);
+CREATE TABLE IF NOT EXISTS crash_rounds (
+  n BIGINT PRIMARY KEY,
+  created BIGINT NOT NULL,
+  fly_at BIGINT NOT NULL,
+  point INT NOT NULL,
+  crash_at BIGINT NOT NULL,
+  settled INT NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS crash_bets (
+  round BIGINT NOT NULL,
+  user_id TEXT NOT NULL,
+  nick TEXT NOT NULL,
+  amount BIGINT NOT NULL,
+  auto INT NOT NULL DEFAULT 0,
+  cashed INT NOT NULL DEFAULT 0,
+  payout BIGINT NOT NULL DEFAULT 0,
+  PRIMARY KEY (round, user_id)
+);
+CREATE TABLE IF NOT EXISTS bac_rounds (
+  n BIGINT PRIMARY KEY,
+  created BIGINT NOT NULL,
+  deal_at BIGINT NOT NULL,
+  result TEXT NOT NULL,
+  settled INT NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS bac_bets (
+  round BIGINT NOT NULL,
+  user_id TEXT NOT NULL,
+  nick TEXT NOT NULL,
+  spot TEXT NOT NULL,
+  amount BIGINT NOT NULL,
+  payout BIGINT NOT NULL DEFAULT 0,
+  PRIMARY KEY (round, user_id, spot)
+);
+CREATE TABLE IF NOT EXISTS tables (
+  id TEXT PRIMARY KEY,
+  game TEXT NOT NULL,
+  state TEXT NOT NULL,
+  ver INT NOT NULL DEFAULT 0,
+  updated BIGINT NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS reactions (
+  id TEXT PRIMARY KEY,
+  room TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  nick TEXT NOT NULL,
+  code TEXT NOT NULL,
+  ts BIGINT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS reactions_room_ts ON reactions(room, ts DESC);
+CREATE TABLE IF NOT EXISTS admin_log (
+  id TEXT PRIMARY KEY,
+  ts BIGINT NOT NULL,
+  admin TEXT NOT NULL,
+  action TEXT NOT NULL,
+  detail TEXT NOT NULL
+);

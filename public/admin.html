@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07060a">
+<meta name="robots" content="noindex">
+<title>관리자 · JUNJA LAND CASINO S2</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Noto+Serif+KR:wght@700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="/css/app.css?v=2">
+<style>
+.app{max-width:980px;padding-bottom:40px}
+.adm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:700px){.adm-grid{grid-template-columns:1fr 1fr}}
+.kpi{padding:16px;border-radius:16px;background:var(--panel);border:1px solid var(--hair)}
+.kpi small{display:block;font-size:11px;color:var(--muted);letter-spacing:.06em}.kpi b{display:block;font-size:22px;margin-top:4px;font-variant-numeric:tabular-nums}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+table.t th{text-align:left;font-weight:600;color:var(--muted);font-size:11.5px;padding:9px 8px;border-bottom:1px solid var(--hair)}
+table.t td{padding:10px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+table.t tr.click{cursor:pointer}table.t tr.click:hover td{background:rgba(214,178,106,.05)}
+.tw{overflow-x:auto;border-radius:16px;border:1px solid var(--hair);background:var(--panel)}
+.pill{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px;border:1px solid var(--hair2);color:var(--gold2)}
+.pill.r{border-color:rgba(214,69,93,.6);color:#ff8197}
+.drawer{position:fixed;right:0;top:0;bottom:0;width:min(520px,100vw);z-index:70;background:linear-gradient(180deg,#16121d,#0c0a10);border-left:1px solid var(--hair2);overflow:auto;padding:20px;box-shadow:-20px 0 60px rgba(0,0,0,.6);animation:dr .25s ease}
+@keyframes dr{from{transform:translateX(40px);opacity:0}}
+.gtog{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.gtog label{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);font-size:13.5px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top"><div class="brand" onclick="location.href='/'"><span id="crest"></span><div class="w"><b class="foil">JUNJA LAND</b><small>ADMIN CONSOLE</small></div></div><a class="btn line sm" href="/" style="margin-left:auto;text-decoration:none">카지노로</a></header>
+  <div id="root"><div class="empty">불러오는 중…</div></div>
+</div>
+<canvas id="fx" class="hide"></canvas>
+<script src="/js/icons.js?v=2"></script>
+<script src="/js/admin.js?v=2"></script>
+</body>
+</html>

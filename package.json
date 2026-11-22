@@ -1,0 +1,8 @@
+{
+  "name": "junja-casino-s2",
+  "version": "2.0.0",
+  "private": true,
+  "description": "JUNJA LAND CASINO SEASON 2 · CELESTIA",
+  "engines": { "node": "22.x" },
+  "dependencies": { "@neondatabase/serverless": "^1.0.2" }
+}
