@@ -9,7 +9,7 @@
   let tok = ''; try { tok = JSON.parse(localStorage.getItem('s2.tok') || '""'); } catch {}
   const G = { slot: '헤븐 릴', crash: '라이브 크래시', bac: '라이브 바카라', holdem: '텍사스 홀덤', seotda: '섯다', bj: '블랙잭', plinko: '스타폴', mines: '다이아 마인즈', hilo: '하이로우', dice: '다이스', vpoker: '비디오 포커', draw: '셀레스티얼 77', bonus: '보너스', admin: '관리자' };
   async function api(path, body, method = 'POST') {
-    const r = await fetch('/api/' + path, { method, headers: { 'content-type': 'application/json', ...(tok ? { 'x-token': tok } : {}) }, body: method === 'POST' ? JSON.stringify(body || {}) : undefined });
+    const r = await fetch('/api/' + path, { method, credentials: 'same-origin', headers: { 'content-type': 'application/json', ...(tok ? { 'x-token': tok } : {}) }, body: method === 'POST' ? JSON.stringify(body || {}) : undefined });
     const j = await r.json().catch(() => ({})); if (!r.ok) { const e = new Error(j.error || '오류'); e.status = r.status; throw e; } return j;
   }
   function toast(m, e) { $$('.toast').forEach(t => t.remove()); const t = document.createElement('div'); t.className = 'toast' + (e ? ' err' : ''); t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2200); }
@@ -20,13 +20,24 @@
   $('#crest').innerHTML = ICON.crest();
   const root = $('#root');
 
+  function loginForm(msg) {
+    root.innerHTML = `<form class="panel deco" id="lf" style="max-width:420px;margin:40px auto"><h3 class="kserif" style="margin-top:0">관리자 로그인</h3><p class="muted" style="font-size:13.5px;line-height:1.6">${msg || '카지노 계정(관리자로 연결된 닉네임)으로 로그인하세요.'}</p>
+      <input class="inp" name="nick" placeholder="닉네임" autocomplete="username" required><input class="inp" name="pw" type="password" placeholder="비밀번호" autocomplete="current-password" required style="margin-top:8px">
+      <button class="btn gold wide" style="margin-top:12px">로그인</button></form>`;
+    $('#lf').onsubmit = async e => {
+      e.preventDefault(); const f = new FormData(e.target);
+      try { const r = await api('login', { nick: f.get('nick'), pw: f.get('pw') }); tok = r.token; try { localStorage.setItem('s2.tok', JSON.stringify(tok)); } catch {} boot(); }
+      catch (er) { toast(er.message, true); }
+    };
+  }
   async function boot() {
-    if (!tok) { root.innerHTML = `<div class="panel" style="max-width:420px;margin:40px auto;text-align:center"><h3 class="kserif">로그인이 필요해요</h3><p class="muted">카지노에서 먼저 로그인한 뒤 다시 열어 주세요.</p><a class="btn gold" href="/" style="text-decoration:none">카지노로 가기</a></div>`; return; }
     try { await api('admin/dashboard'); tabs('dash'); }
     catch (e) {
-      if (e.status === 403 || e.status === 401) {
-        root.innerHTML = `<div class="panel deco" style="max-width:440px;margin:40px auto"><h3 class="kserif" style="margin-top:0">관리자 인증</h3><p class="muted" style="font-size:13.5px;line-height:1.6">지금 로그인한 계정에 관리자 권한을 연결합니다. 배포할 때 받은 <b class="gold">관리자 코드</b>를 입력하세요. 한 번만 하면 돼요.</p><input class="inp" id="code" type="password" placeholder="관리자 코드"><button class="btn gold wide" id="claim" style="margin-top:12px">권한 연결</button></div>`;
+      if (e.status === 401) return loginForm();
+      if (e.status === 403) {
+        root.innerHTML = `<div class="panel deco" style="max-width:440px;margin:40px auto"><h3 class="kserif" style="margin-top:0">관리자 인증</h3><p class="muted" style="font-size:13.5px;line-height:1.6">지금 로그인한 계정에 관리자 권한을 연결합니다. 받은 <b class="gold">관리자 코드</b>를 입력하세요. 한 번만 하면 돼요.</p><input class="inp" id="code" type="password" placeholder="관리자 코드"><button class="btn gold wide" id="claim" style="margin-top:12px">권한 연결</button><button class="btn dark wide" id="other" style="margin-top:8px">다른 계정으로 로그인</button></div>`;
         $('#claim').onclick = async () => { try { await api('admin/claim', { code: $('#code').value.trim() }); toast('관리자 권한이 연결됐어요'); boot(); } catch (er) { toast(er.message, true); } };
+        $('#other').onclick = () => loginForm();
       } else root.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
     }
   }
