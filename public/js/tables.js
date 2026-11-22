@@ -14,7 +14,7 @@
         $$('#tt button', el).forEach(b => b.classList.toggle('on', b.dataset.g === g));
         try {
           const r = await GET('lobby');
-          $('#tl', el).innerHTML = r.tables.filter(t => t.game === g).map(t => `<button class="tl" data-go="table-${t.id}"><div class="ic">${ICON[g === 'holdem' ? 'g_holdem' : 'g_seotda']()}</div><div class="m"><b>${esc(t.name)}</b><small>${g === 'holdem' ? `블라인드 ${fmt(t.sb)} / ${fmt(t.bb)}` : `앤티 ${fmt(t.ante)}`} · 바이인 ${fmt(t.min)} ~ ${fmt(t.max)}</small><div class="seatdots">${Array.from({ length: t.seats }, (_, i) => `<i class="${i < t.players ? 'on' : ''}"></i>`).join('')}</div>${t.nicks.length ? `<small class="gold">${t.nicks.map(esc).join(', ')}</small>` : ''}</div><div class="v gold" style="font-weight:800">${t.players}/${t.seats}</div></button>`).join('');
+          $('#tl', el).innerHTML = r.tables.filter(t => t.game === g).map(t => `<button class="tl" data-go="table-${t.id}"><div class="ic">${ICON[g === 'holdem' ? 'g_holdem' : 'g_seotda']()}</div><div class="m"><b>${esc(t.name)}</b>${t.minTier ? `<span class="vipt">VIP</span>` : ''}<small>${g === 'holdem' ? `블라인드 ${fmt(t.sb)} / ${fmt(t.bb)}` : `앤티 ${fmt(t.ante)}`} · 바이인 ${fmt(t.min)} ~ ${fmt(t.max)}</small>${t.minTier && App.me.rank < t.minTier ? `<small class="gold">${esc(App.info.tiers[t.minTier].name)} 이상 착석 가능 · 관전은 누구나</small>` : ''}<div class="seatdots">${Array.from({ length: t.seats }, (_, i) => `<i class="${i < t.players ? 'on' : ''}"></i>`).join('')}</div>${t.nicks.length ? `<small class="gold">${t.nicks.map(esc).join(', ')}</small>` : ''}</div><div class="v gold" style="font-weight:800">${t.players}/${t.seats}</div></button>`).join('');
         } catch (e) { $('#tl', el).innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
       };
       $('#tt', el).onclick = e => { const b = e.target.closest('[data-g]'); if (!b) return; g = b.dataset.g; S2.store.set('tg', g); show(); };
@@ -60,8 +60,8 @@
           const turn = st.phase === 'play' && st.toAct === si, win = st.phase === 'show' && winners.includes(si);
           d.classList.toggle('fold', s.folded || (!s.inHand && st.phase !== 'wait')); d.classList.toggle('turn', turn); d.classList.toggle('win', win);
           const showCards = si !== me && s.cards.length;
-          d.innerHTML = `<div class="av">${ICON.avatar(s.avatar, s.nick)}${turn ? '<svg class="ring" viewBox="0 0 60 60"><circle cx="30" cy="30" r="28" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="3"/><circle class="tr" cx="30" cy="30" r="28" fill="none" stroke="#f3e3b3" stroke-width="3" stroke-dasharray="176" stroke-dashoffset="0" stroke-linecap="round"/></svg>' : ''}${st.dealer === si && isH() ? '<span class="dbtn">D</span>' : ''}</div>
-            <div class="nm">${esc(s.nick)}${si === me ? ' (나)' : ''}</div><div class="stk">${fmt(s.stack)}</div>
+          d.innerHTML = `<div class="av">${S2.framed(s.tier, s.avatar, s.nick)}${turn ? '<svg class="ring" viewBox="0 0 60 60"><circle cx="30" cy="30" r="28" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="3"/><circle class="tr" cx="30" cy="30" r="28" fill="none" stroke="#f3e3b3" stroke-width="3" stroke-dasharray="176" stroke-dashoffset="0" stroke-linecap="round"/></svg>' : ''}${st.dealer === si && isH() ? '<span class="dbtn">D</span>' : ''}</div>
+            <div class="nm ${S2.nickCls(s.tier)}">${esc(s.nick)}${si === me ? ' (나)' : ''}</div><div class="stk">${fmt(s.stack)}</div>
             <div class="st">${win ? `<span class="hn">+${fmt(s.won)}</span>` : s.leave ? '퇴장 예정' : s.allin ? '<span class="red">ALL-IN</span>' : s.folded ? (isH() ? '폴드' : '다이') : esc(s.lastAct || '')}</div>
             ${showCards ? '<div class="hc"></div>' : ''}${s.handName && si !== me ? `<div class="hn">${esc(s.handName)}</div>` : ''}`;
           if (showCards) { const hc = d.querySelector('.hc'); s.cards.forEach(c => { const e = cardOf(c); e.style.animation = 'none'; hc.appendChild(e); }); }
@@ -114,6 +114,7 @@
       seatsEl.onclick = e => {
         const b = e.target.closest('[data-sit]'); if (!b) return;
         const si = +b.dataset.sit, c = st.cfg, max = Math.min(c.max, App.me.bal);
+        if (c.minTier && App.me.rank < c.minTier) return toast(`${App.info.tiers[c.minTier].name} 이상만 앉을 수 있는 VIP 테이블이에요.`, true);
         if (max < c.min) return toast(`바이인 최소 ${fmt(c.min)}G가 필요해요.`, true);
         let v = Math.min(max, Math.max(c.min, c.min * 2.5));
         modal(`<h4>${esc(st.name)} · ${si + 1}번 자리</h4><p>테이블에 들고 갈 금액을 정하세요. 일어나면 남은 칩은 지갑으로 돌아옵니다.</p><div class="bigx foil" id="bv"></div><input type="range" id="bi" min="${c.min}" max="${max}" step="${c.min / 20}" value="${v}" style="width:100%;accent-color:#d6b26a"><div class="row muted" style="font-size:11px;margin:4px 0 16px"><span>${fmt(c.min)}</span><span style="text-align:right">${fmt(max)}</span></div><div class="row"><button class="btn dark" data-x>취소</button><button class="btn gold" id="bgo">앉기</button></div>`, (m, close) => {

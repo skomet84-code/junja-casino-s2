@@ -17,6 +17,7 @@
         <div class="reels" id="reels"><svg class="paylines" id="pl"></svg></div><div class="smsg" id="sm">스핀을 눌러 시작하세요</div></div>
         <div id="sb"></div>
         <div class="row" style="margin-top:10px"><button class="btn gold xl" id="spin" style="flex:2">SPIN</button><button class="btn violet xl" id="auto">AUTO</button></div>
+        <button class="btn line wide hide" id="comp" style="margin-top:8px"></button>
         <div class="opt"><label class="tog"><input type="checkbox" id="turbo"><i></i>터보</label><div class="seg" id="an"><button data-n="10" class="on">10회</button><button data-n="50">50회</button><button data-n="100">100회</button></div></div>
         <details class="rules"><summary>배당표 · 규칙</summary><div class="panel"><div class="pay">${Object.entries(PAY).map(([k, p]) => `<div>${symSVG(k)}<span>3 ×${p[0]} · 4 ×${p[1]}<br>5 <b class="gold">×${p[2]}</b></span></div>`).join('')}<div style="grid-column:1/-1">${symSVG('SC')}<span>후광 3/4/5개 어디서나 → 총 베팅 ×2/×10/×50 + 프리스핀 8/10/15회</span></div></div>
         배당은 라인 베팅(총 베팅 ÷ 10) 기준이며 왼쪽 릴부터 3개 이상 연속이어야 합니다. J(와일드)는 후광을 뺀 모든 심볼을 대신합니다. 프리스핀 당첨금은 2배. 한 라인에 J 5개면 <b class="gold">GRAND JACKPOT</b> (총 베팅 1억G 이상이면 적립금 100%, 미만이면 비율만큼). 모든 베팅의 1%가 잭팟에 쌓입니다. 이론 환수율 약 96%.</div></details>`;
@@ -52,14 +53,16 @@
           setTimeout(() => { sfx('stop'); while (strip.children.length > 3) strip.lastChild.remove(); res(); }, dur * 1000 + 30);
         })));
       }
-      async function spin() {
+      const compUI = () => { const me = App.me, c = $('#comp', el); c.classList.toggle('hide', !me.compMax); c.disabled = !me.compLeft || spinning || free > 0 || autoLeft > 0; c.innerHTML = me.compLeft ? `✦ 컴프 스핀 · ${fmt(me.compBet)}G 무료 · ${me.compLeft}회 남음` : '오늘의 컴프 스핀을 모두 사용했어요'; };
+      async function spin(comp) {
         if (spinning || !alive) return;
-        const isFree = free > 0, b = bet.get();
-        if (!isFree && b > App.me.bal) { autoLeft = 0; ui(); return toast('게임머니가 부족해요.', true); }
-        spinning = true; clearWins(); ui(); $('#sm', el).textContent = isFree ? '✺ FREE SPIN' : '행운을 굴리는 중…';
-        if (!isFree) S2.setBal(App.me.bal - b);
+        if (comp && free > 0) comp = false;
+        const isFree = free > 0, b = comp ? App.me.compBet : bet.get();
+        if (!isFree && !comp && b > App.me.bal) { autoLeft = 0; ui(); return toast('게임머니가 부족해요.', true); }
+        spinning = true; clearWins(); ui(); compUI(); $('#sm', el).textContent = comp ? '✦ COMP SPIN' : isFree ? '✺ FREE SPIN' : '행운을 굴리는 중…';
+        if (!isFree && !comp) S2.setBal(App.me.bal - b);
         let r;
-        try { r = await POST('slot', { bet: b }); } catch (e) { spinning = false; autoLeft = 0; ui(); err(e); S2.refreshMe(); return; }
+        try { r = await POST('slot', comp ? { comp: true } : { bet: b }); if (r.comp) App.me.compLeft = r.compLeft; } catch (e) { spinning = false; autoLeft = 0; ui(); err(e); S2.refreshMe(); return; }
         const shownBal = r.bal; S2.setBal(shownBal - r.payout, false);
         await animate(r.grid, $('#turbo', el).checked);
         if (!alive) return;
@@ -76,7 +79,7 @@
           if (r.freeSpins) { free = r.freeLeft; freeTotal = 0; toast(`✺ 후광 강림! 프리스핀 ${r.freeSpins}회`); sfx('big'); }
           if (autoLeft > 0) autoLeft--;
         }
-        spinning = false; ui();
+        spinning = false; ui(); compUI();
         if (free > 0 || autoLeft > 0) {
           const turbo = $('#turbo', el).checked;
           await sleep(r.payout ? (turbo ? 500 : 1100) : (turbo ? 150 : 420));
@@ -85,10 +88,12 @@
         }
       }
       $('#spin', el).onclick = () => { sfx('click'); spin(); };
+      $('#comp', el).onclick = () => { sfx('click'); spin(true); };
       $('#auto', el).onclick = () => { sfx('click'); if (autoLeft > 0) { autoLeft = 0; ui(); return; } autoLeft = autoN; ui(); spin(); };
       $('#an', el).onclick = e => { const b = e.target.closest('[data-n]'); if (!b) return; autoN = +b.dataset.n; $$('#an button', el).forEach(x => x.classList.toggle('on', x === b)); };
       const onResize = () => lastWins.length && drawLines(); addEventListener('resize', onResize);
       slotV = { stop() { alive = false; removeEventListener('resize', onResize); } };
+      compUI();
       try { const s = await S2.GET('slot'); free = s.freeLeft; freeTotal = s.freeTotal; $('#sjp', el).textContent = fmt(s.jackpot); ui(); if (free > 0) { toast(`남은 프리스핀 ${free}회를 이어서 돌립니다`); setTimeout(spin, 800); } } catch (e) {}
       ui();
     },

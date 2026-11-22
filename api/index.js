@@ -4,6 +4,7 @@ const solo = require('../lib/solo');
 const live = require('../lib/live');
 const tables = require('../lib/tables');
 const admin = require('../lib/admin');
+const draw = require('../lib/draw');
 const { q, one, num } = require('../lib/db');
 const { HttpError, bad } = core;
 
@@ -41,23 +42,23 @@ async function route(method, path, req, body, query) {
     case 'GET /me': {
       const s = await core.settings();
       const online = await one(`SELECT COUNT(*) AS n FROM users WHERE last_seen>$1`, [Date.now() - 60000]);
-      const ticker = await q(`SELECT l.game,l.wager,l.payout,l.ts,u.nick FROM ledger l JOIN users u ON u.id=l.user_id WHERE l.ts>$1 AND l.wager>0 AND l.payout>=l.wager*10 ORDER BY l.ts DESC LIMIT 12`, [Date.now() - 86400000 * 3]);
+      const ticker = await q(`SELECT l.game,l.wager,l.payout,l.ts,l.note,u.nick FROM ledger l JOIN users u ON u.id=l.user_id WHERE l.ts>$1 AND ((l.wager>0 AND l.payout>=l.wager*10) OR (l.game='draw' AND l.payout>=1000000000)) ORDER BY l.ts DESC LIMIT 12`, [Date.now() - 86400000 * 3]);
       return { me: u ? core.publicMe(u) : null, notice: s.notice || '', disabled: s.disabled || {}, jackpot: await core.jackpot(), online: num(online.n),
-        ticker: ticker.map(t => ({ game: t.game, nick: t.nick, x: num(t.payout) / num(t.wager), payout: num(t.payout), ts: num(t.ts) })), reactions: core.REACTIONS };
+        ticker: ticker.map(t => ({ game: t.game, nick: t.nick, x: num(t.wager) ? num(t.payout) / num(t.wager) : 0, payout: num(t.payout), ts: num(t.ts), note: t.game === 'draw' ? t.note : undefined })), reactions: core.REACTIONS, reactMin: core.REACT_MIN, tiers: core.TIERS };
     }
     case 'POST /daily': {
-      need(); const day = core.kstDay(), amt = 10000000 * (core.rankIdx(u.peak) + 1);
+      need(); const day = core.kstDay(), amt = core.tierOf(u.bal).daily;
       const r = await one(`UPDATE users SET daily=$2 WHERE id=$1 AND daily<>$2 RETURNING id`, [u.id, day]);
       if (!r) throw bad('오늘은 이미 받았어요.');
       const bal = await core.credit(u.id, amt); await core.ledger(u.id, 'bonus', 0, amt, '출석 보너스');
       return { amount: amt, bal };
     }
     case 'POST /rescue': {
-      need(); const t = Date.now();
-      const r = await one(`UPDATE users SET rescue_at=$2 WHERE id=$1 AND bal<$3 AND rescue_at<$4 RETURNING id`, [u.id, t, core.MIN_BET, t - 30 * 60000]);
-      if (!r) throw bad(u.bal >= core.MIN_BET ? '잔액이 1만G 미만일 때만 받을 수 있어요.' : '30분에 한 번만 받을 수 있어요.');
-      const bal = await core.credit(u.id, 5000000); await core.ledger(u.id, 'bonus', 0, 5000000, '천사의 구제금');
-      return { amount: 5000000, bal };
+      need(); const t = Date.now(), tier = core.TIERS[0];
+      const r = await one(`UPDATE users SET rescue_at=$2 WHERE id=$1 AND bal<$3 AND rescue_at<$4 RETURNING id`, [u.id, t, core.MIN_BET, t - tier.rescueMin * 60000]);
+      if (!r) throw bad(u.bal >= core.MIN_BET ? '잔액이 1만G 미만일 때만 받을 수 있어요.' : `${tier.rescueMin}분에 한 번만 받을 수 있어요.`);
+      const bal = await core.credit(u.id, tier.rescue); await core.ledger(u.id, 'bonus', 0, tier.rescue, '천사의 구제금');
+      return { amount: tier.rescue, bal };
     }
     case 'POST /avatar': { need(); const a = Math.floor(Number(body.avatar)); if (!(a >= 0 && a < 12)) throw bad('avatar'); await q(`UPDATE users SET avatar=$2 WHERE id=$1`, [u.id, a]); return { ok: true }; }
     case 'GET /history': {
@@ -69,11 +70,15 @@ async function route(method, path, req, body, query) {
     }
     case 'GET /rank': {
       const rich = await q(`SELECT nick,bal,peak,avatar FROM users WHERE banned=0 ORDER BY bal DESC LIMIT 20`);
+      // rank list carries tier for frames
       const hof = await q(`SELECT l.game,l.wager,l.payout,l.note,l.ts,u.nick FROM ledger l JOIN users u ON u.id=l.user_id WHERE l.wager>0 AND l.payout>=l.wager*50 ORDER BY l.payout DESC LIMIT 20`);
-      return { rich: rich.map(r => ({ nick: r.nick, bal: num(r.bal), avatar: num(r.avatar), rank: core.rankIdx(num(r.peak)) })),
+      return { rich: rich.map(r => ({ nick: r.nick, bal: num(r.bal), avatar: num(r.avatar), rank: core.rankIdx(num(r.bal)) })),
         hof: hof.map(h => ({ game: h.game, nick: h.nick, wager: num(h.wager), payout: num(h.payout), note: h.note, ts: num(h.ts) })) };
     }
     case 'POST /react': need(); return core.react(u, body.room, body.code);
+    case 'GET /tiers': return { tiers: core.TIERS, reactMin: core.REACT_MIN, prizes: draw.PRIZES };
+    case 'GET /draw': need(); return draw.state(u);
+    case 'POST /draw/pick': need(); return draw.pick(u, body);
     case 'GET /lobby': return { tables: await tables.lobby(), reacts: await core.reactionsSince('lobby', since) };
     // solo
     case 'POST /slot': need(); return solo.slot(u, body);
@@ -101,6 +106,7 @@ async function route(method, path, req, body, query) {
   }
   if (parts[0] === 'admin' && method === 'POST') {
     const fn = { claim: admin.claim, dashboard: admin.dashboard, users: admin.users, user: admin.userDetail, adjust: admin.adjust, setbal: admin.setBal, ban: admin.ban,
+      draw: (u) => { if (!u || !u.is_admin) throw new HttpError(403, '관리자만'); return draw.adminToday(); },
       resetpw: admin.resetPw, setadmin: admin.setAdmin, settings: admin.saveSettings, jackpot: admin.setJackpot, table: admin.resetTable, log: admin.log }[parts[1]];
     if (fn) return parts[1] === 'claim' ? fn(u, body.code) : fn(u, body);
   }

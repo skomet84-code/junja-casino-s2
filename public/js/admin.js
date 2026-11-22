@@ -7,7 +7,7 @@
   const full = n => Math.floor(Number(n) || 0).toLocaleString('ko-KR');
   const dt = t => t ? new Date(t).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
   let tok = ''; try { tok = JSON.parse(localStorage.getItem('s2.tok') || '""'); } catch {}
-  const G = { slot: '헤븐 릴', crash: '라이브 크래시', bac: '라이브 바카라', holdem: '텍사스 홀덤', seotda: '섯다', bj: '블랙잭', plinko: '스타폴', mines: '다이아 마인즈', hilo: '하이로우', dice: '다이스', vpoker: '비디오 포커', bonus: '보너스', admin: '관리자' };
+  const G = { slot: '헤븐 릴', crash: '라이브 크래시', bac: '라이브 바카라', holdem: '텍사스 홀덤', seotda: '섯다', bj: '블랙잭', plinko: '스타폴', mines: '다이아 마인즈', hilo: '하이로우', dice: '다이스', vpoker: '비디오 포커', draw: '셀레스티얼 77', bonus: '보너스', admin: '관리자' };
   async function api(path, body, method = 'POST') {
     const r = await fetch('/api/' + path, { method, headers: { 'content-type': 'application/json', ...(tok ? { 'x-token': tok } : {}) }, body: method === 'POST' ? JSON.stringify(body || {}) : undefined });
     const j = await r.json().catch(() => ({})); if (!r.ok) { const e = new Error(j.error || '오류'); e.status = r.status; throw e; } return j;
@@ -39,13 +39,14 @@
   async function dash(el) {
     const d = await api('admin/dashboard');
     const sum = rows => rows.reduce((a, r) => ({ w: a.w + r.wager, p: a.p + r.payout, n: a.n + r.plays }), { w: 0, p: 0, n: 0 });
-    const real = r => r.filter(x => !['bonus', 'admin'].includes(x.game));
+    const real = r => r.filter(x => !['bonus', 'admin', 'draw'].includes(x.game));
     const t = sum(real(d.today)), w = sum(real(d.week));
     const tbl = rows => `<div class="tw"><table class="t"><tr><th>게임</th><th>판수</th><th>총 베팅</th><th>총 지급</th><th>하우스 손익</th><th>환수율</th></tr>${real(rows).map(r => `<tr><td>${G[r.game] || r.game}</td><td>${full(r.plays)}</td><td>${fmt(r.wager)}</td><td>${fmt(r.payout)}</td><td class="${r.wager - r.payout >= 0 ? 'green' : 'red'}">${fmt(r.wager - r.payout)}</td><td>${r.wager ? (r.payout / r.wager * 100).toFixed(1) + '%' : '-'}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">기록 없음</td></tr>'}</table></div>`;
     el.innerHTML = `<div class="adm-grid"><div class="kpi"><small>전체 회원</small><b>${full(d.users)}</b></div><div class="kpi"><small>지금 접속</small><b class="green">${full(d.online)}</b></div><div class="kpi"><small>오늘 가입</small><b>${full(d.newbies)}</b></div><div class="kpi"><small>유통 중인 G</small><b class="gold">${fmt(d.money)}</b></div>
       <div class="kpi"><small>오늘 베팅</small><b>${fmt(t.w)}</b></div><div class="kpi"><small>오늘 하우스 손익</small><b class="${t.w - t.p >= 0 ? 'green' : 'red'}">${fmt(t.w - t.p)}</b></div><div class="kpi"><small>7일 하우스 손익</small><b class="${w.w - w.p >= 0 ? 'green' : 'red'}">${fmt(w.w - w.p)}</b></div><div class="kpi"><small>잭팟 적립금</small><b class="gold">${fmt(d.jackpot)}</b></div></div>
       <div class="sec"><h2>Today</h2><small>오늘 게임별</small><div class="rule"></div></div>${tbl(d.today)}
       <div class="sec"><h2>7 Days</h2><small>최근 7일 게임별 · 홀덤·섯다는 유저끼리라 손익 0이 정상</small><div class="rule"></div></div>${tbl(d.week)}
+      <div class="sec"><h2>Celestial 77</h2><small>오늘 ${d.draw.count}/77개 열림 · 지급 ${fmt(d.draw.picks.reduce((a, p) => a + p.prize, 0))}G</small><div class="rule"></div></div><div class="tw"><table class="t"><tr><th>등수</th><th>번호</th><th>회원</th><th>보상</th><th>시간</th></tr>${d.draw.picks.filter(p => p.rank <= 4).map(p => `<tr><td>${p.rank}등</td><td>${p.n}</td><td>${esc(p.nick)}</td><td class="gold">${fmt(p.prize)}</td><td>${dt(p.ts)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">아직 4등 이상 당첨 없음</td></tr>'}</table></div>
       <div class="sec"><h2>Big Wins</h2><small>7일 내 20배 이상</small><div class="rule"></div></div><div class="tw"><table class="t"><tr><th>시간</th><th>회원</th><th>게임</th><th>베팅</th><th>당첨</th><th>내용</th></tr>${d.big.map(b => `<tr><td>${dt(b.ts)}</td><td>${esc(b.nick)}</td><td>${G[b.game] || b.game}</td><td>${fmt(b.wager)}</td><td class="gold">${fmt(b.payout)}</td><td class="muted">${esc(b.note)}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">없음</td></tr>'}</table></div>`;
   }
 

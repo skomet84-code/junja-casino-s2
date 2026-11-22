@@ -172,6 +172,7 @@
     list.slice().reverse().forEach(r => {
       if (seenRx.has(r.id)) return; seenRx.add(r.id);
       if (Date.now() - (r.ts - clockOff) > 7000) return;
+      if (r.code >= 90) { const t = r.code - 90; const f = $('#floaty'); const d = document.createElement('div'); d.className = 'ent t' + t; d.innerHTML = `<small>${t >= 5 ? '👑 HEAVEN SENT' : '✺ CELESTIA ROYAL'}</small>${esc(r.nick)}님이 입장하셨습니다`; f.appendChild(d); sfx('win'); setTimeout(() => d.remove(), 4300); return; }
       const text = App.reactions[r.code]; if (!text) return;
       const emoji = r.code < 12;
       if (rxTarget) { const host = rxTarget(r.uid); if (host) { const b = document.createElement('div'); b.className = 'bubble' + (emoji ? ' e' : ''); b.textContent = text; host.appendChild(b); setTimeout(() => b.remove(), 3700); sfx('pop'); return; } }
@@ -185,10 +186,10 @@
     const dim = document.createElement('div'); dim.className = 'rx-dim';
     const sh = document.createElement('div'); sh.className = 'rx-sheet';
     const R = App.reactions;
-    sh.innerHTML = `<div class="em">${R.slice(0, 12).map((t, i) => `<button data-c="${i}">${t}</button>`).join('')}</div><div class="ph">${R.slice(12).map((t, i) => `<button data-c="${i + 12}">${esc(t)}</button>`).join('')}</div>`;
+    sh.innerHTML = `<div class="em">${R.slice(0, 12).map((t, i) => `<button data-c="${i}">${t}</button>`).join('')}</div><div class="ph">${R.slice(12).map((t, i) => { const c = i + 12, need = (App.info && App.info.reactMin || {})[c]; return `<button data-c="${c}" class="${need && App.me.rank < need ? 'lock' : ''}">${esc(t)}</button>`; }).join('')}</div>`;
     const close = () => { dim.remove(); sh.remove(); };
     dim.onclick = close;
-    sh.onclick = async e => { const b = e.target.closest('[data-c]'); if (!b) return; close(); try { await POST('react', { room: rxRoom, code: +b.dataset.c }); sfx('pop'); document.dispatchEvent(new CustomEvent('rxsent')); } catch (er) { toast(er.message, true); } };
+    sh.onclick = async e => { const b = e.target.closest('[data-c]'); if (!b) return; if (b.classList.contains('lock')) { const need = App.info.reactMin[b.dataset.c]; return toast(`${(App.info.tiers[need] || {}).name} 이상 전용 문구예요.`, true); } close(); try { await POST('react', { room: rxRoom, code: +b.dataset.c }); sfx('pop'); document.dispatchEvent(new CustomEvent('rxsent')); } catch (er) { toast(er.message, true); } };
     document.body.append(dim, sh);
   }
 
@@ -205,7 +206,7 @@
     $$('.view').forEach(x => x.classList.remove('on'));
     const el = $('#v-' + (views[name] ? name : 'lobby')); el.classList.add('on');
     cur = v; curName = name;
-    $$('.nav button').forEach(b => b.classList.toggle('on', b.dataset.go === name || (b.dataset.go === 'lobby' && !['rank', 'me', 'tables'].includes(name) && name !== 'table') || (b.dataset.go === 'tables' && name === 'table')));
+    $$('.nav button').forEach(b => b.classList.toggle('on', b.dataset.go === name || (b.dataset.go === 'lobby' && !['rank', 'me', 'tables', 'table'].includes(name)) || (b.dataset.go === 'tables' && name === 'table')));
     document.body.classList.toggle('nonav', name === 'table');
     window.scrollTo(0, 0);
     if (v.mount) v.mount(el, arg);

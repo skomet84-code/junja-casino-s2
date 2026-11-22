@@ -1,0 +1,27 @@
+const B=process.env.BASE,AC=process.env.AC,S=ms=>new Promise(r=>setTimeout(r,ms));let F=0;const ok=(c,m)=>{console.log(c?'OK ':'FAIL',m);if(!c)F++};
+const call=async(t,m,p,b)=>{const r=await fetch(B+'/api/'+p,{method:m,headers:{'content-type':'application/json',...(t?{'x-token':t}:{})},body:b?JSON.stringify(b):undefined});const j=await r.json();j.$=r.status;return j};
+const bal=async t=>(await call(t,'GET','me')).me.bal;
+(async()=>{const tg='zt'+Date.now().toString(36).slice(-5);const T=[];for(const n of['a','b','c'])T.push((await call(0,'POST','register',{nick:tg+n,pw:'1234'})).token);const[A,Bb,C]=T;
+ok(await bal(A)===1e8,'register+1억');ok((await call(A,'POST','daily')).amount>0,'daily');
+let b0=await bal(Bb),r=await call(Bb,'POST','slot',{bet:100000});ok(r.grid&&await bal(Bb)===b0-1e5+r.payout,'slot');
+b0=await bal(Bb);r=await call(Bb,'POST','plinko',{bet:10000,risk:'mid',count:3});ok(r.drops&&await bal(Bb)===b0-3e4+r.drops.reduce((a,d)=>a+d.payout,0),'plinko');
+r=await call(Bb,'POST','dice',{bet:10000,target:50});ok(typeof r.roll==='number','dice');
+r=await call(Bb,'POST','bj',{action:'deal',bet:10000});let g=0;while(r.game&&r.game.state==='play'&&g++<8)r=await call(Bb,'POST','bj',{action:'stand'});ok(r.game&&r.game.state==='done','bj');
+r=await call(Bb,'POST','hilo',{action:'start',bet:10000});ok(!!r.game,'hilo');await call(Bb,'POST','hilo',{action:r.game.cur.v>7?'lo':'hi'});
+r=await call(Bb,'POST','mines',{action:'start',bet:10000,mines:3});ok(!!r.game,'mines');r=await call(Bb,'POST','mines',{action:'pick',cell:7});ok(r.game||r.boom!==undefined,'mines pick');
+r=await call(Bb,'POST','vpoker',{action:'deal',bet:10000});ok(r.game,'vpoker');r=await call(Bb,'POST','vpoker',{action:'draw',holds:[1,0,0,0,1]});ok(r.hand,'vpoker draw');
+ok((await call(A,'POST','react',{room:'lobby',code:12})).ok,'react');
+let s=await call(A,'GET','crash');while(s.round.phase!=='bet'||s.round.flyAt-s.now<2500){await S(600);s=await call(A,'GET','crash')}const n=s.round.n;
+const bA=await bal(A),bB=await bal(Bb);ok((await call(A,'POST','crash/bet',{bet:100000})).ok,'crash bet A');ok((await call(Bb,'POST','crash/bet',{bet:100000,auto:1.01})).ok,'crash bet B auto');
+const off=s.now-Date.now();while(Date.now()+off<s.round.flyAt+300)await S(100);const co=await call(A,'POST','crash/cashout');console.log('  cashout',co.mult||co.error);
+do{await S(800);s=await call(A,'GET','crash')}while(s.round.n===n&&s.round.phase!=='end');await S(1700);s=await call(A,'GET','crash');const p=s.hist[0];
+ok(await bal(A)===bA-1e5+(co.payout||0),'crash settle A ('+p+')');ok(await bal(Bb)===bB-1e5+(p>=1.01?101000:0),'crash auto B');
+let q=await call(A,'GET','bac');while(q.round.phase!=='bet'||q.round.dealAt-q.now<3000){await S(800);q=await call(A,'GET','bac')}const bn=q.round.n,ba=await bal(A);
+ok((await call(A,'POST','bac/bet',{spot:'player',amount:100000})).ok,'bac bet');ok((await call(C,'POST','bac/bet',{spot:'tie',amount:10000})).ok,'bac bet C');
+while(true){await S(1000);q=await call(A,'GET','bac');if(q.round.n!==bn||Date.now()+(q.now-Date.now())>q.round.dealAt+2000)break}await S(800);q=await call(A,'GET','bac');const w=q.road[q.road.length-1].w;
+ok(await bal(A)===ba-1e5+(w==='player'?2e5:w==='tie'?1e5:0),'bac settle ('+w+')');
+ok((await call(A,'POST','table/h1/sit',{seat:0,buyin:4e5})).mySeat===0,'holdem sit A');ok((await call(Bb,'POST','table/h1/sit',{seat:3,buyin:4e5})).mySeat===3,'holdem sit B');
+const tk={0:A,3:Bb};let acts=0;for(let i=0;i<40&&acts<4;i++){const v=await call(A,'GET','table/h1');if(v.phase==='play'){const t=tk[v.toAct];const x=await call(t,'POST','table/h1/act',{type:'fold'});if(x.$===200)acts++}else await S(1000)}
+ok(acts>=1,'holdem acted '+acts);await call(A,'POST','table/h1/leave');await call(Bb,'POST','table/h1/leave');
+ok((await call(A,'POST','admin/claim',{code:AC})).ok,'admin claim');const d=await call(A,'POST','admin/dashboard');ok(d.users>=3,'admin dashboard');
+console.log(F?'FAILED '+F:'ALL PASSED',tg)})().catch(e=>{console.log('ERR',e.message);process.exit(1)});

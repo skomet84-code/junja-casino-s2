@@ -15,9 +15,9 @@
     dice: { name: 'Celestial Dice', ko: '다이스', icon: 'g_dice', desc: '확률을 내가 정한다 · 최대 99배', glow: 'rgba(199,182,255,.4)', g1: '#1b1530', tag: 'NEW' },
     vpoker: { name: 'Video Poker', ko: '비디오 포커', icon: 'g_vpoker', desc: '잭 이상 · 로열 플러시 800배', glow: 'rgba(214,178,106,.35)', g1: '#1e1810', tag: 'NEW' }
   };
-  const GAMENAME = { ...Object.fromEntries(Object.entries(GAME).map(([k, v]) => [k, v.ko])), bonus: '보너스', admin: '관리자' };
+  const GAMENAME = { ...Object.fromEntries(Object.entries(GAME).map(([k, v]) => [k, v.ko])), bonus: '보너스', admin: '관리자', draw: '셀레스티얼 77' };
   window.GAME = GAME; window.GAMENAME = GAMENAME;
-  const gi = g => ICON[(GAME[g] || {}).icon || 'gift']();
+  const gi = g => g === 'draw' ? ICON.emblem().replace('class="emb"', '') : ICON[(GAME[g] || {}).icon || 'gift']();
 
   // ---------- boot ----------
   S2.boot = async function () {
@@ -79,15 +79,17 @@
       el.innerHTML = `
         <div class="hero"><div class="ring"></div><div class="ey">SEASON II · CELESTIA</div>
           <h1>하늘이 <span class="foil">내려준</span><br>카지노</h1>
-          <p>${esc(me.nick)}님, 오늘의 운은 어떤가요?<br>열한 개의 테이블이 당신을 기다립니다.</p>
+          <p><span class="${S2.nickCls(me.rank)}" style="font-weight:700">${esc(me.nick)}</span>님, 오늘의 운은 어떤가요?<br>열한 개의 테이블이 당신을 기다립니다.</p>
           <div class="jp"><div><div class="l">HALO GRAND JACKPOT</div><div class="a foil" id="jpA">${full(I.jackpot)} G</div></div>${ICON.g_slot()}</div>
-          <div class="stats3"><div><b id="onl">${I.online || 1}</b><span>접속 중</span></div><div><b>${esc(me.rankName)}</b><span>나의 등급</span></div><div><b class="gold">${fmt(me.bal)}</b><span>보유 G</span></div></div>
+          <div class="stats3"><div><b id="onl">${I.online || 1}</b><span>접속 중</span></div><div data-go="me" style="cursor:pointer"><b class="${S2.nickCls(me.rank)}">${esc(me.rankName)}</b><span>나의 등급 ›</span></div><div><b class="gold">${fmt(me.bal)}</b><span>보유 G</span></div></div>
         </div>
         ${I.notice ? `<div class="notice"><b class="gold">공지</b><span>${esc(I.notice)}</span></div>` : ''}
-        ${(I.ticker || []).length ? `<div class="ticker"><div class="tr">${I.ticker.map(t => `<span>✦ <b>${esc(t.nick)}</b>님 ${esc(GAMENAME[t.game] || t.game)}에서 <b>×${t.x.toFixed(1)}</b> · ${fmt(t.payout)}G</span>`).join('')}</div></div>` : ''}
+        ${(I.ticker || []).length ? `<div class="ticker"><div class="tr">${I.ticker.map(t => `<span>✦ <b>${esc(t.nick)}</b>님 ${t.game === 'draw' ? `셀레스티얼 77에서 <b>${esc((t.note || '').split('· ').pop())}</b>` : `${esc(GAMENAME[t.game] || t.game)}에서 <b>×${t.x.toFixed(1)}</b>`} · ${fmt(t.payout)}G</span>`).join('')}</div></div>` : ''}
         <div class="perks">
           <button class="perk ${me.dailyReady ? 'ready' : ''}" id="pd">${ICON.gift()}<div><b>출석 보너스</b><span>${me.dailyReady ? '+' + fmt(me.dailyAmt) + 'G 받기' : '내일 다시 받을 수 있어요'}</span></div></button>
-          <button class="perk ${me.bal < 10000 && Date.now() > me.rescueReadyAt ? 'ready' : ''}" id="pr">${ICON.wing()}<div><b>천사의 구제금</b><span>${me.bal < 10000 ? (Date.now() > me.rescueReadyAt ? '+500만G 받기' : '잠시 후 가능') : '1만G 미만일 때'}</span></div></button>
+          <button class="perk ${me.bal < 10000 && Date.now() > me.rescueReadyAt ? 'ready' : ''}" id="pr">${ICON.wing()}<div><b>천사의 구제금</b><span>${me.bal < 10000 ? (Date.now() > me.rescueReadyAt ? '+' + fmt(me.rescueAmt) + 'G 받기' : '잠시 후 가능') : '1만G 미만일 때'}</span></div></button>
+          <button class="perk ${me.drawsLeft ? 'ready' : ''}" data-go="draw" style="grid-column:1/-1">${ICON.emblem().replace('class="emb"', 'style="width:30px;height:30px;flex:0 0 30px"')}<div><b>Celestial 77 · 오늘의 별자리</b><span>${me.drawsLeft ? `별 ${me.drawsLeft}개를 고를 수 있어요 · 1등 1,000억 G` : '오늘의 별을 모두 골랐어요 · 자정에 새로 열려요'}</span></div></button>
+          ${me.compMax ? `<button class="perk ${me.compLeft ? 'ready' : ''}" data-go="slot" style="grid-column:1/-1">${ICON.g_slot().replace('<svg', '<svg style="width:28px;height:28px;flex:0 0 28px"')}<div><b>컴프 스핀 · ${esc(me.rankName)} 혜택</b><span>${me.compLeft ? `오늘 ${me.compLeft}회 남음 · 회당 ${fmt(me.compBet)}G 무료 베팅` : '오늘 컴프 스핀을 모두 사용했어요'}</span></div></button>` : ''}
         </div>
         <div class="sec"><h2>Tables</h2><small>11 GAMES</small><div class="rule"></div></div>
         <div class="tabs" id="cats">${Object.entries(cats).map(([k, v]) => `<button data-c="${k}" class="${k === cat ? 'on' : ''}">${v}</button>`).join('')}</div>
@@ -124,7 +126,7 @@
             return;
           }
           const r = await GET('rank');
-          if (t === 'rich') box.innerHTML = `<div class="list">${r.rich.map((u, i) => `<div class="li"><div class="rk">${i + 1}</div><div style="width:36px;height:36px">${ICON.avatar(u.avatar, u.nick)}</div><div class="m"><b>${esc(u.nick)}</b><small>${esc(['별빛 루키', '문라이트 플레이어', '골드 하이롤러', '플래티넘 VIP', '셀레스티아 로열', '하늘이 내려준 자'][u.rank])}</small></div><div class="v gold">${fmt(u.bal)}</div></div>`).join('')}</div>`;
+          if (t === 'rich') box.innerHTML = `<div class="list">${r.rich.map((u, i) => `<div class="li"><div class="rk">${i + 1}</div><div style="width:36px;height:36px;flex:0 0 36px">${S2.framed(u.rank, u.avatar, u.nick)}</div><div class="m"><b class="${S2.nickCls(u.rank)}">${esc(u.nick)}</b><small>${S2.tierChip(u.rank)}</small></div><div class="v gold">${fmt(u.bal)}</div></div>`).join('')}</div>`;
           else box.innerHTML = r.hof.length ? `<div class="list">${r.hof.map((h, i) => `<div class="li"><div class="rk">${i + 1}</div><div class="gi">${gi(h.game)}</div><div class="m"><b>${esc(h.nick)}</b> · ${esc(GAMENAME[h.game] || h.game)}<small>${esc(h.note)} · ${ago(h.ts)}</small></div><div class="v gold">+${fmt(h.payout)}<small class="muted" style="display:block;font-size:10.5px">×${(h.payout / h.wager).toFixed(1)}</small></div></div>`).join('')}</div>` : '<div class="empty">아직 50배 이상 대박이 없어요.<br>첫 번째 주인공이 되어 보세요.</div>';
         } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
       };
@@ -137,10 +139,14 @@
   register('me', {
     async mount(el) {
       await refreshMe(); const me = App.me;
-      const pct = me.nextRank ? Math.min(100, (me.peak - me.nextRank.from) / (me.nextRank.at - me.nextRank.from) * 100) : 100;
-      el.innerHTML = `<div class="panel rankcard deco"><div class="av">${ICON.avatar(me.avatar, me.nick)}</div><div style="flex:1;min-width:0"><div class="muted" style="font-size:10px;letter-spacing:.3em">MY RANK</div><div style="font-family:var(--kserif);font-size:20px;font-weight:700;margin-top:3px">${esc(me.nick)}</div><div class="gold" style="font-size:13px;margin-top:2px">${esc(me.rankName)}</div><div class="bar"><i style="width:${pct}%"></i></div><div class="muted" style="font-size:11px;margin-top:6px">${me.nextRank ? `${esc(me.nextRank.name)}까지 최고 잔액 ${fmt(me.nextRank.at - me.peak)}G` : '최고 등급 · 하늘이 내려준 자'}</div></div></div>
+      const pct = me.nextRank ? Math.max(0, Math.min(100, (me.bal - me.nextRank.from) / (me.nextRank.at - me.nextRank.from) * 100)) : 100;
+      el.innerHTML = `<div class="title"><div><h1 class="foil">Membership</h1><div class="sub">MAISON CELESTIA · 멤버십</div></div></div>${S2.memberCard(me)}
+        <div class="panel" style="margin-top:12px"><div class="row" style="align-items:center"><div style="width:52px;height:52px;flex:0 0 52px">${S2.framed(me.rank, me.avatar, me.nick)}</div><div style="flex:1;min-width:0"><div>${S2.tierChip(me.rank)}</div><div class="bar"><i style="width:${pct}%"></i></div><div class="muted" style="font-size:11px;margin-top:6px">${me.nextRank ? `${esc(me.nextRank.name)}까지 ${fmt(me.nextRank.at - me.bal)}G 더 보유하면 승급` : '최고 등급 · 하늘이 내려준 자'}<br>등급은 지금 보유한 잔액 기준이라 잃으면 내려가요.</div></div></div></div>
+        <div class="sec"><h2>Privileges</h2><small>나의 등급 혜택</small><div class="rule"></div></div>
+        <div class="panel"><ul style="margin:0;padding:0;list-style:none;font-size:13px;line-height:2">${S2.tierPerks(me.rank).map(x => `<li><span class="gold">✦</span> ${esc(x)}</li>`).join('')}</ul></div>
+        <div class="sec"><h2>Lounge</h2><small>전체 등급</small><div class="rule"></div></div>${S2.lounge(me)}
         <div class="sec"><h2>Medallion</h2><small>아바타</small><div class="rule"></div></div>
-        <div class="avpick" id="avp">${AVC.map((_, i) => `<button data-a="${i}" class="${i === me.avatar ? 'on' : ''}">${ICON.avatar(i, me.nick)}</button>`).join('')}</div>
+        <div class="avpick" id="avp">${AVC.map((_, i) => `<button data-a="${i}" class="${i === me.avatar ? 'on' : ''}">${ICON.avatar(i, me.nick)}</button>`).join('')}</div><div class="muted" style="font-size:11.5px;margin-top:8px">메달리온 테두리는 등급에 따라 바뀌어요 · 지금: ${['스탠다드', '실버 문 링', '골드 링', '플래티넘 다이아 링', '셀레스티아 오비트', '천상의 후광'][me.rank]}</div>
         <div class="sec"><h2>Statistics</h2><small>게임별 통계</small><div class="rule"></div></div><div id="gs" class="list"><div class="empty">불러오는 중…</div></div>
         <div class="sec"><h2>Settings</h2><small>설정</small><div class="rule"></div></div>
         <div class="panel"><label class="tog"><input type="checkbox" id="snd" ${store.get('sound', true) ? 'checked' : ''}><i></i>효과음</label>
@@ -149,11 +155,11 @@
         <div class="foot">관리자이신가요? <a href="/admin">관리자 페이지</a></div>`;
       $('#snd', el).onchange = e => store.set('sound', e.target.checked);
       $('#lo', el).onclick = logout;
-      $('#avp', el).onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; try { await POST('avatar', { avatar: +b.dataset.a }); App.me.avatar = +b.dataset.a; $$('#avp button', el).forEach(x => x.classList.toggle('on', x === b)); $('.rankcard .av', el).innerHTML = ICON.avatar(+b.dataset.a, me.nick); } catch (er) { toast(er.message, true); } };
+      $('#avp', el).onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; try { await POST('avatar', { avatar: +b.dataset.a }); App.me.avatar = +b.dataset.a; $$('#avp button', el).forEach(x => x.classList.toggle('on', x === b)); S2.refreshMe(); } catch (er) { toast(er.message, true); } };
       try {
         const r = await GET('history'); const st = Object.fromEntries(r.stats.map(s => [s.game, s]));
         const tot = r.stats.filter(s => GAME[s.game]).reduce((a, s) => ({ w: a.w + s.wager, p: a.p + s.payout, n: a.n + s.plays }), { w: 0, p: 0, n: 0 });
-        $('#gs', el).outerHTML = `<div class="kv" style="margin-bottom:8px"><div><small>총 플레이</small><b>${full(tot.n)}판</b></div><div><small>순손익</small><b class="${tot.p - tot.w >= 0 ? 'green' : 'red'}">${tot.p - tot.w >= 0 ? '+' : ''}${fmt(tot.p - tot.w)}</b></div><div><small>총 베팅</small><b>${fmt(tot.w)}</b></div><div><small>최고 잔액</small><b class="gold">${fmt(me.peak)}</b></div></div>
+        $('#gs', el).outerHTML = `<div class="kv" style="margin-bottom:8px"><div><small>총 플레이</small><b>${full(tot.n)}판</b></div><div><small>순손익</small><b class="${tot.p - tot.w >= 0 ? 'green' : 'red'}">${tot.p - tot.w >= 0 ? '+' : ''}${fmt(tot.p - tot.w)}</b></div><div><small>총 베팅</small><b>${fmt(tot.w)}</b></div><div><small>최고 잔액 기록</small><b class="gold">${fmt(me.peak)}</b></div></div>
           <div class="list">${Object.keys(GAME).map(g => { const s = st[g] || { plays: 0, wager: 0, payout: 0, wins: 0, best: 0 }; const n = s.payout - s.wager; return `<div class="li"><div class="gi">${gi(g)}</div><div class="m">${GAME[g].ko}<small>${s.plays}판 · 승률 ${s.plays ? Math.round(s.wins / s.plays * 100) : 0}% · 최고 +${fmt(s.best)}</small></div><div class="v ${n > 0 ? 'green' : n < 0 ? 'red' : ''}">${n > 0 ? '+' : ''}${fmt(n)}</div></div>`; }).join('')}</div>`;
       } catch (e) {}
     }

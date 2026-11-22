@@ -98,3 +98,21 @@ CREATE TABLE IF NOT EXISTS admin_log (
   action TEXT NOT NULL,
   detail TEXT NOT NULL
 );
+
+-- v2.1: tier perks + Celestial 77
+ALTER TABLE users ADD COLUMN IF NOT EXISTS draw_day TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS draw_used INT NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS comp_day TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS comp_used INT NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS draw_board (day TEXT PRIMARY KEY, ranks TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS draw_picks (
+  day TEXT NOT NULL,
+  number INT NOT NULL,
+  user_id TEXT NOT NULL,
+  nick TEXT NOT NULL,
+  rank INT NOT NULL,
+  prize BIGINT NOT NULL,
+  ts BIGINT NOT NULL,
+  PRIMARY KEY (day, number)
+);
+CREATE INDEX IF NOT EXISTS draw_picks_user ON draw_picks(user_id, day);
